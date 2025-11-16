@@ -6,7 +6,7 @@ import time
 import pyautogui
 
 from gestures import rightclick
-from gestures import openhandq
+from gestures import openhand
 from gestures import scrollup
 from gestures import leftclick
 from settings_window import SettingsWindow
