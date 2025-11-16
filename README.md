@@ -25,6 +25,6 @@ The settings window opens automatically when you run the program and includes:
 
 ## Usage
 
-Download here[https://github.com/dlt87/Accesigesture/releases/tag/v1.0.1]
+Download [here](https://github.com/dlt87/Accesigesture/releases/tag/v1.0.1)
 
 The settings window will appear alongside the gesture detector window. Adjust settings in real-time while the program runs!
