@@ -147,6 +147,7 @@ def is_pinch_mid(hand_landmarks, threshold=0.05):
 # --- Main Loop ---
 cv2.namedWindow(window_name)
 cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+cv2.moveWindow(window_name, 0, 0)
 
 while cap.isOpened() and running:
     success, image = cap.read()
