@@ -233,7 +233,7 @@ while cap.isOpened() and running:
                             pinch_duration = current_time - pinch_start_time
                             
                             # If held for more than 1 second and not yet transitioned to hold
-                            if pinch_duration >= 0.5 and not pinch_is_held:
+                            if pinch_duration >= 0.3 and not pinch_is_held:
                                 action_function()  # Press and hold
                                 pinch_is_held = True
                                 
