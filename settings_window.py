@@ -3,6 +3,7 @@ from tkinter import ttk
 import threading
 
 class ModernSlider(ttk.Frame):
+    # ... (Your ModernSlider class is perfect and unchanged) ...
     """Custom slider widget with better visuals and controls."""
     def __init__(self, parent, label, default_value, min_val, max_val, 
                  resolution, callback, description="", unit="", **kwargs):
@@ -13,8 +14,6 @@ class ModernSlider(ttk.Frame):
         self.resolution = resolution
         self.callback = callback
         self.unit = unit
-        
-        # ... (Rest of ModernSlider code is unchanged) ...
         
         # Container frame
         container = ttk.Frame(self)
@@ -90,10 +89,13 @@ class ModernSlider(ttk.Frame):
         self.slider.set(value)
         self._on_change(value)
 
+
 class SettingsWindow:
-    def __init__(self):
+    # --- NEW: Added 'on_quit' callback ---
+    def __init__(self, on_quit=None):
         self.window = None
         self.thread = None
+        self.on_quit_callback = on_quit # Store the quit function
         
         # Default settings
         self.smoothing_factor = 0.2
@@ -107,31 +109,10 @@ class SettingsWindow:
         self.roi_y_max = 0.9
         self.scroll_speed = 3
         
-        # --- NEW: REVERSED MAPPING ---
-        # These are the gestures your main.py can detect
-        self.gesture_names = [
-            "None", # So you can un-map an action
-            "PINCH", 
-            "PINCH_MID", 
-            "THUMBS_UP", 
-            "THUMBS_DOWN", 
-            "OPEN", 
-            "TOGGLE"
-        ]
-        
-        # These are the actions your gesture folder can perform
-        self.action_names = [
-            "Move Cursor", 
-            "Left Click (Hold)", 
-            "Right Click (Once)", 
-            "Scroll Up", 
-            "Scroll Down"
-            # We don't need "None" or "Toggle" here
-        ]
-        
-        # This will hold the tk.StringVar objects for each ACTION
+        # --- REVERSED MAPPING ---
+        self.gesture_names = ["None", "PINCH", "PINCH_MID", "THUMBS_UP", "THUMBS_DOWN", "OPEN", "TOGGLE"]
+        self.action_names = ["Move Cursor", "Left Click (Hold)", "Right Click (Once)", "Scroll Up", "Scroll Down"]
         self.action_mappings = {} 
-        # --- END NEW ---
         
         self.on_settings_changed = None
         
@@ -146,6 +127,9 @@ class SettingsWindow:
         self.window.title("✋ Gesture Control Settings")
         self.window.geometry("580x950") 
         self.window.resizable(False, False)
+        
+        # --- NEW: Handle window close ('X' button) ---
+        self.window.protocol("WM_DELETE_WINDOW", self._quit_app)
         
         # ... (Styling code is unchanged) ...
         self.window.configure(bg='#f0f0f0')
@@ -183,7 +167,6 @@ class SettingsWindow:
         subtitle.pack()
 
         # ... (All Slider/Card code for Thresholds is unchanged) ...
-        # === CURSOR SETTINGS ===
         cursor_card = self._create_card(main_frame, "🖱️ Cursor Settings")
         self.smoothing_slider = ModernSlider(cursor_card, "Smoothing Factor", self.smoothing_factor, 0.0, 1.0, 0.05, lambda v: setattr(self, 'smoothing_factor', v), "Higher = more responsive • Lower = smoother")
         self.smoothing_slider.pack(fill=tk.X)
@@ -202,51 +185,32 @@ class SettingsWindow:
         self.roi_y_min_slider.pack(fill=tk.X)
         self.roi_y_max_slider = ModernSlider(cursor_card, "ROI Bottom Edge", self.roi_y_max, 0.2, 1.0, 0.05, lambda v: setattr(self, 'roi_y_max', v), "Bottom boundary of hand tracking area")
         self.roi_y_max_slider.pack(fill=tk.X)
-        
-        # === GESTURE SETTINGS ===
         gesture_card = self._create_card(main_frame, "👆 Gesture Thresholds")
         self.pinch_slider = ModernSlider(gesture_card, "Pinch Threshold", self.pinch_threshold, 0.01, 0.15, 0.01, lambda v: setattr(self, 'pinch_threshold', v), "Distance between fingers to trigger pinch")
         self.pinch_slider.pack(fill=tk.X)
-        self.scroll_speed_slider = ModernSlider(
-            gesture_card, "Scroll Speed", self.scroll_speed,
-            1, 10, 1, lambda v: setattr(self, 'scroll_speed', int(v)),
-            "Speed of scroll gestures"
-        )
+        self.fist_cooldown_slider = ModernSlider(gesture_card, "Fist Cooldown", self.fist_cooldown, 0.1, 3.0, 0.1, lambda v: setattr(self, 'fist_cooldown', v), "Time between repeated fist actions", unit="s")
+        self.fist_cooldown_slider.pack(fill=tk.X)
+        self.scroll_speed_slider = ModernSlider(gesture_card, "Scroll Speed", self.scroll_speed, 1, 10, 1, lambda v: setattr(self, 'scroll_speed', int(v)), "Speed of scroll gestures")
         self.scroll_speed_slider.pack(fill=tk.X)
         
-        # --- NEW: ACTION MAPPING CARD ---
+        # ... (Action Mapping card is unchanged) ...
         mapping_card = self._create_card(main_frame, "🔄 Action Mapping")
-
-        ttk.Label(mapping_card, 
-                  text="Assign a hand gesture to a computer action.", 
-                  font=('Segoe UI', 8), foreground='#666666'
-                 ).pack(anchor=tk.W, padx=5, pady=(0, 10))
-
-        # Loop over ACTIONS, not gestures
+        ttk.Label(mapping_card, text="Assign a hand gesture to a computer action.", font=('Segoe UI', 8), foreground='#666666').pack(anchor=tk.W, padx=5, pady=(0, 10))
         for action in self.action_names:
             frame = ttk.Frame(mapping_card, style='Card.TFrame') 
             frame.pack(fill=tk.X, padx=5, pady=2)
-            
-            tk.Label(frame, text=f"{action}:", width=15, anchor="w",
-                     font=('Segoe UI', 10), background='white').pack(side=tk.LEFT, padx=(5, 0))
-            
+            tk.Label(frame, text=f"{action}:", width=15, anchor="w", font=('Segoe UI', 10), background='white').pack(side=tk.LEFT, padx=(5, 0))
             var = tk.StringVar(self.window)
-            
-            # Set default values
             if action == "Left Click (Hold)": var.set("PINCH")
             elif action == "Right Click (Once)": var.set("PINCH_MID")
             elif action == "Scroll Up": var.set("THUMBS_UP")
             elif action == "Scroll Down": var.set("THUMBS_DOWN")
             elif action == "Move Cursor": var.set("OPEN")
             else: var.set("None")
-
-            # Use gesture_names as the options
             dropdown = ttk.OptionMenu(frame, var, var.get(), *self.gesture_names)
             dropdown.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 10), pady=5)
-            
-            self.action_mappings[action] = var # Store the variable
-        # --- END NEW ---
-
+            self.action_mappings[action] = var 
+        
         # ... (Detection Settings card is unchanged) ...
         detection_card = self._create_card(main_frame, "🔍 Hand Detection")
         self.detection_conf_slider = ModernSlider(detection_card, "Detection Confidence", self.min_detection_confidence, 0.3, 1.0, 0.05, lambda v: setattr(self, 'min_detection_confidence', v), "Minimum confidence to detect hand initially")
@@ -254,21 +218,42 @@ class SettingsWindow:
         self.tracking_conf_slider = ModernSlider(detection_card, "Tracking Confidence", self.min_tracking_confidence, 0.3, 1.0, 0.05, lambda v: setattr(self, 'min_tracking_confidence', v), "Minimum confidence to track hand continuously")
         self.tracking_conf_slider.pack(fill=tk.X)
         
-        # ... (Buttons and Info code is unchanged) ...
+        # === BUTTONS ===
         button_card = ttk.Frame(main_frame)
         button_card.pack(fill=tk.X, pady=(15, 10))
         button_container = ttk.Frame(button_card)
         button_container.pack()
-        reset_btn = ttk.Button(button_container, text="🔄 Reset to Defaults", command=self._reset_defaults)
+        
+        reset_btn = ttk.Button(button_container, text="🔄 Reset to Defaults", 
+                                 command=self._reset_defaults)
         reset_btn.pack(side=tk.LEFT, padx=5)
+        
+        # --- NEW: Quit Button ---
+        # Add a style for the quit button
+        style.configure('Quit.TButton', font=('Segoe UI', 9, 'bold'), foreground='white', background='#e74c3c')
+        style.map('Quit.TButton', background=[('active', '#c0392b')])
+        
+        quit_btn = ttk.Button(button_container, text="❌ Quit Program", 
+                                command=self._quit_app, style='Quit.TButton')
+        quit_btn.pack(side=tk.LEFT, padx=5)
+        # --- END NEW ---
+        
+        # ... (Info label is unchanged) ...
         info_frame = ttk.Frame(main_frame)
         info_frame.pack(fill=tk.X, pady=(10, 0))
         info_label = ttk.Label(info_frame, text="💡 Tip: Changes apply immediately", font=('Segoe UI', 8), foreground='#27ae60', background='#e8f5e9', relief='flat', padding=8)
         info_label.pack(fill=tk.X)
         
-        # Start the GUI loop
         self.window.mainloop()
     
+    # --- NEW: Quit Function ---
+    def _quit_app(self):
+        """Signals the main thread to stop and closes the UI."""
+        if self.on_quit_callback:
+            self.on_quit_callback() # Signal main.py to stop
+        self.window.destroy() # Close this settings window
+    # --- END NEW ---
+
     def _create_card(self, parent, title):
         # ... (This helper function is unchanged) ...
         card = ttk.Frame(parent, style='Card.TFrame', relief='solid', borderwidth=1)
@@ -295,7 +280,7 @@ class SettingsWindow:
         self.roi_y_max = 0.9
         self.scroll_speed = 3
         
-        # Update sliders if they exist
+        # Update sliders and mappings
         try:
             self.smoothing_slider.set(self.smoothing_factor)
             self.pinch_slider.set(self.pinch_threshold)
@@ -308,14 +293,12 @@ class SettingsWindow:
             self.roi_y_min_slider.set(self.roi_y_min)
             self.roi_y_max_slider.set(self.roi_y_max)
             
-            # --- NEW: Reset action mappings ---
             if self.action_mappings:
                 self.action_mappings["Left Click (Hold)"].set("PINCH")
                 self.action_mappings["Right Click (Once)"].set("PINCH_MID")
                 self.action_mappings["Scroll Up"].set("THUMBS_UP")
                 self.action_mappings["Scroll Down"].set("THUMBS_DOWN")
                 self.action_mappings["Move Cursor"].set("OPEN")
-            # --- END NEW ---
                 
         except:
             pass
@@ -324,7 +307,7 @@ class SettingsWindow:
             self.on_settings_changed()
     
     def get_settings(self):
-        """Return a dictionary of all current settings, including mappings."""
+        # ... (This function is unchanged) ...
         settings = {
             'smoothing_factor': self.smoothing_factor,
             'fist_cooldown': self.fist_cooldown,
@@ -338,9 +321,7 @@ class SettingsWindow:
             'scroll_speed': self.scroll_speed,
             'mappings': {}
         }
-        # --- NEW: Get mapping values ---
         if self.action_mappings:
             for action, var in self.action_mappings.items():
                 settings['mappings'][action] = var.get()
-        # --- END NEW ---
         return settings
