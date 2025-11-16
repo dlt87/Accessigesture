@@ -97,7 +97,7 @@ class SettingsWindow:
         self.on_quit_callback = on_quit 
         
         # Default settings
-        self.smoothing_factor = 0.2
+        self.smoothing_factor = 0.5
         self.fist_cooldown = 1.0
         self.pinch_threshold = 0.05
         self.min_detection_confidence = 0.7
