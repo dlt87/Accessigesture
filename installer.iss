@@ -2,7 +2,7 @@
 ; This creates a professional Windows installer
 
 #define MyAppName "AccesiGesture"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "AccesiGesture Team"
 #define MyAppURL "https://github.com/dlt87/Accesigesture"
 #define MyAppExeName "AccesiGesture.exe"
